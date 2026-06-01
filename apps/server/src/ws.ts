@@ -69,6 +69,7 @@ import * as ProcessDiagnostics from "./diagnostics/ProcessDiagnostics.ts";
 import * as ProcessResourceMonitor from "./diagnostics/ProcessResourceMonitor.ts";
 import * as TraceDiagnostics from "./diagnostics/TraceDiagnostics.ts";
 import * as SourceControlDiscoveryLayer from "./sourceControl/SourceControlDiscovery.ts";
+import * as MyWorkService from "./sourceControl/MyWorkService.ts";
 import { SourceControlRepositoryService } from "./sourceControl/SourceControlRepositoryService.ts";
 import * as AzureDevOpsCli from "./sourceControl/AzureDevOpsCli.ts";
 import * as BitbucketApi from "./sourceControl/BitbucketApi.ts";
@@ -191,6 +192,7 @@ const makeWsRpcLayer = (currentSessionId: AuthSessionId) =>
         ),
       );
       const sourceControlRepositories = yield* SourceControlRepositoryService;
+      const myWorkService = yield* MyWorkService.MyWorkService;
       const bootstrapCredentials = yield* BootstrapCredentialService;
       const sessions = yield* SessionCredentialService;
       const processDiagnostics = yield* ProcessDiagnostics.ProcessDiagnostics;
@@ -896,6 +898,18 @@ const makeWsRpcLayer = (currentSessionId: AuthSessionId) =>
               "rpc.aggregate": "server",
             },
           ),
+        [WS_METHODS.serverGetMyWork]: (input) =>
+          observeRpcEffect(WS_METHODS.serverGetMyWork, myWorkService.getSummary(input), {
+            "rpc.aggregate": "server",
+          }),
+        [WS_METHODS.serverHandoffJiraTicketToQa]: (input) =>
+          observeRpcEffect(
+            WS_METHODS.serverHandoffJiraTicketToQa,
+            myWorkService.handoffJiraTicketToQa(input),
+            {
+              "rpc.aggregate": "server",
+            },
+          ),
         [WS_METHODS.serverGetTraceDiagnostics]: (_input) =>
           observeRpcEffect(
             WS_METHODS.serverGetTraceDiagnostics,
@@ -1277,6 +1291,7 @@ export const websocketRpcRouteLayer = Layer.unwrap(
                   Layer.provide(VcsProcess.layer),
                 ),
               ),
+              Layer.provide(MyWorkService.layer),
             ),
           ),
         );

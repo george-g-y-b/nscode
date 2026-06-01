@@ -69,6 +69,10 @@ import { EditorId } from "./editor.ts";
 import { ExecutionEnvironmentDescriptor } from "./environment.ts";
 import type { ClientSettings, ServerSettings, ServerSettingsPatch } from "./settings.ts";
 import type {
+  JiraQaHandoffInput,
+  JiraQaHandoffResult,
+  MyWorkSummaryInput,
+  MyWorkSummaryResult,
   SourceControlCloneRepositoryInput,
   SourceControlCloneRepositoryResult,
   SourceControlDiscoveryResult,
@@ -475,6 +479,8 @@ export interface LocalApi {
     getSettings: () => Promise<ServerSettings>;
     updateSettings: (patch: ServerSettingsPatch) => Promise<ServerSettings>;
     discoverSourceControl: () => Promise<SourceControlDiscoveryResult>;
+    getMyWork: (input?: MyWorkSummaryInput) => Promise<MyWorkSummaryResult>;
+    handoffJiraTicketToQa: (input: JiraQaHandoffInput) => Promise<JiraQaHandoffResult>;
     getTraceDiagnostics: () => Promise<ServerTraceDiagnosticsResult>;
     getProcessDiagnostics: () => Promise<ServerProcessDiagnosticsResult>;
     getProcessResourceHistory: (

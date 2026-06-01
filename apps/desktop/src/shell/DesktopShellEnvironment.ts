@@ -36,6 +36,17 @@ const LOGIN_SHELL_ENV_NAMES = [
   "HOMEBREW_REPOSITORY",
   "XDG_CONFIG_HOME",
   "XDG_DATA_HOME",
+  "T3CODE_JIRA_BASE_URL",
+  "T3CODE_JIRA_EMAIL",
+  "T3CODE_JIRA_API_TOKEN",
+  "T3CODE_JIRA_JQL",
+  "JIRA_BASE_URL",
+  "JIRA_EMAIL",
+  "JIRA_API_TOKEN",
+  "JIRA_JQL",
+  "ATLASSIAN_JIRA_BASE_URL",
+  "ATLASSIAN_EMAIL",
+  "ATLASSIAN_API_TOKEN",
 ] as const;
 const WINDOWS_PROFILE_ENV_NAMES = ["PATH", "FNM_DIR", "FNM_MULTISHELL_PATH"] as const;
 const WINDOWS_SHELL_CANDIDATES = ["pwsh.exe", "powershell.exe"] as const;
@@ -317,6 +328,17 @@ const installPosixEnvironment = Effect.fn("desktop.shellEnvironment.installPosix
       "HOMEBREW_REPOSITORY",
       "XDG_CONFIG_HOME",
       "XDG_DATA_HOME",
+      "T3CODE_JIRA_BASE_URL",
+      "T3CODE_JIRA_EMAIL",
+      "T3CODE_JIRA_API_TOKEN",
+      "T3CODE_JIRA_JQL",
+      "JIRA_BASE_URL",
+      "JIRA_EMAIL",
+      "JIRA_API_TOKEN",
+      "JIRA_JQL",
+      "ATLASSIAN_JIRA_BASE_URL",
+      "ATLASSIAN_EMAIL",
+      "ATLASSIAN_API_TOKEN",
     ] as const) {
       if (!config.env[name] && shellEnvironment[name]) {
         config.env[name] = shellEnvironment[name];

@@ -37,6 +37,7 @@ function useNewThreadState() {
         branch?: string | null;
         worktreePath?: string | null;
         envMode?: DraftThreadEnvMode;
+        forceNewDraft?: boolean;
       },
     ): Promise<void> => {
       const {
@@ -59,13 +60,14 @@ function useNewThreadState() {
       const hasBranchOption = options?.branch !== undefined;
       const hasWorktreePathOption = options?.worktreePath !== undefined;
       const hasEnvModeOption = options?.envMode !== undefined;
+      const forceNewDraft = options?.forceNewDraft === true;
       const storedDraftThread = getDraftSessionByLogicalProjectKey(logicalProjectKey);
       const latestActiveDraftThread: DraftThreadState | null = currentRouteTarget
         ? currentRouteTarget.kind === "server"
           ? getDraftThread(currentRouteTarget.threadRef)
           : getDraftSession(currentRouteTarget.draftId)
         : null;
-      if (storedDraftThread) {
+      if (storedDraftThread && !forceNewDraft) {
         return (async () => {
           if (hasBranchOption || hasWorktreePathOption || hasEnvModeOption) {
             setDraftThreadContext(storedDraftThread.draftId, {
@@ -94,7 +96,8 @@ function useNewThreadState() {
         latestActiveDraftThread &&
         currentRouteTarget?.kind === "draft" &&
         latestActiveDraftThread.logicalProjectKey === logicalProjectKey &&
-        latestActiveDraftThread.promotedTo == null
+        latestActiveDraftThread.promotedTo == null &&
+        !forceNewDraft
       ) {
         if (hasBranchOption || hasWorktreePathOption || hasEnvModeOption) {
           setDraftThreadContext(currentRouteTarget.draftId, {

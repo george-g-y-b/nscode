@@ -147,6 +147,14 @@ function createBrowserLocalApi(rpcClient?: WsRpcClient): LocalApi {
         rpcClient
           ? rpcClient.server.discoverSourceControl()
           : Promise.reject(unavailableLocalBackendError()),
+      getMyWork: (input) =>
+        rpcClient
+          ? rpcClient.server.getMyWork(input ?? {})
+          : Promise.reject(unavailableLocalBackendError()),
+      handoffJiraTicketToQa: (input) =>
+        rpcClient
+          ? rpcClient.server.handoffJiraTicketToQa(input)
+          : Promise.reject(unavailableLocalBackendError()),
       getTraceDiagnostics: () =>
         rpcClient
           ? rpcClient.server.getTraceDiagnostics()

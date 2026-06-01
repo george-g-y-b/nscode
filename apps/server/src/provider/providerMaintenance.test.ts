@@ -6,7 +6,9 @@ import os from "node:os";
 import path from "node:path";
 import { ProviderDriverKind } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
 import * as Random from "effect/Random";
+import { HttpClient, HttpClientResponse } from "effect/unstable/http";
 import {
   clearLatestProviderVersionCacheForTests,
   createProviderVersionAdvisory,
@@ -14,6 +16,7 @@ import {
   makeProviderMaintenanceCapabilities,
   makeStaticProviderMaintenanceResolver,
   normalizeCommandPath,
+  resolveLatestProviderVersion,
   resolveProviderMaintenanceCapabilitiesEffect,
 } from "./providerMaintenance.ts";
 
@@ -63,6 +66,64 @@ const staticToolUpdate = makeStaticProviderMaintenanceResolver(
     updateLockKey: "static-tool",
   }),
 );
+
+const makeVersionHttpClientLayer = (input: {
+  readonly npmVersion: string;
+  readonly homebrewCaskVersionByToken?: Readonly<Record<string, string>>;
+  readonly homebrewFormulaVersionByToken?: Readonly<Record<string, string>>;
+}) =>
+  Layer.succeed(
+    HttpClient.HttpClient,
+    HttpClient.make((request) => {
+      const { url } = request;
+      if (url.startsWith("https://registry.npmjs.org/")) {
+        return Effect.succeed(
+          HttpClientResponse.fromWeb(
+            request,
+            Response.json(
+              { version: input.npmVersion },
+              { headers: { "content-type": "application/json" } },
+            ),
+          ),
+        );
+      }
+
+      if (url.startsWith("https://formulae.brew.sh/api/cask/")) {
+        const suffix = url.replace("https://formulae.brew.sh/api/cask/", "");
+        const token = decodeURIComponent(suffix.replace(/\.json$/, ""));
+        const version = input.homebrewCaskVersionByToken?.[token];
+        return Effect.succeed(
+          HttpClientResponse.fromWeb(
+            request,
+            version
+              ? Response.json({ version }, { headers: { "content-type": "application/json" } })
+              : new Response("not found", { status: 404 }),
+          ),
+        );
+      }
+
+      if (url.startsWith("https://formulae.brew.sh/api/formula/")) {
+        const suffix = url.replace("https://formulae.brew.sh/api/formula/", "");
+        const token = decodeURIComponent(suffix.replace(/\.json$/, ""));
+        const version = input.homebrewFormulaVersionByToken?.[token];
+        return Effect.succeed(
+          HttpClientResponse.fromWeb(
+            request,
+            version
+              ? Response.json(
+                  { versions: { stable: version } },
+                  { headers: { "content-type": "application/json" } },
+                )
+              : new Response("not found", { status: 404 }),
+          ),
+        );
+      }
+
+      return Effect.succeed(
+        HttpClientResponse.fromWeb(request, new Response("not found", { status: 404 })),
+      );
+    }),
+  );
 
 afterEach(() => {
   clearLatestProviderVersionCacheForTests();
@@ -486,4 +547,49 @@ describe("providerMaintenance", () => {
       update: null,
     });
   });
+
+  it.effect("uses Homebrew cask latest versions for brew-managed providers before npm latest", () =>
+    Effect.gen(function* () {
+      const capabilities = makeProviderMaintenanceCapabilities({
+        provider: driver("claude"),
+        packageName: "@anthropic-ai/claude-code",
+        updateExecutable: "brew",
+        updateArgs: ["upgrade", "claude-code"],
+        updateLockKey: "homebrew",
+      });
+
+      const latestVersion = yield* resolveLatestProviderVersion(capabilities).pipe(
+        Effect.provide(
+          makeVersionHttpClientLayer({
+            npmVersion: "2.1.145",
+            homebrewCaskVersionByToken: { "claude-code": "2.1.139" },
+          }),
+        ),
+      );
+
+      expect(latestVersion).toBe("2.1.139");
+    }),
+  );
+
+  it.effect("falls back to npm latest when Homebrew package metadata is unavailable", () =>
+    Effect.gen(function* () {
+      const capabilities = makeProviderMaintenanceCapabilities({
+        provider: driver("opencode"),
+        packageName: "opencode-ai",
+        updateExecutable: "brew",
+        updateArgs: ["upgrade", "unknown-package"],
+        updateLockKey: "homebrew",
+      });
+
+      const latestVersion = yield* resolveLatestProviderVersion(capabilities).pipe(
+        Effect.provide(
+          makeVersionHttpClientLayer({
+            npmVersion: "1.15.0",
+          }),
+        ),
+      );
+
+      expect(latestVersion).toBe("1.15.0");
+    }),
+  );
 });

@@ -131,6 +131,8 @@ export interface WsRpcClient {
     readonly discoverSourceControl: RpcUnaryNoArgMethod<
       typeof WS_METHODS.serverDiscoverSourceControl
     >;
+    readonly getMyWork: RpcUnaryMethod<typeof WS_METHODS.serverGetMyWork>;
+    readonly handoffJiraTicketToQa: RpcUnaryMethod<typeof WS_METHODS.serverHandoffJiraTicketToQa>;
     readonly getTraceDiagnostics: RpcUnaryNoArgMethod<typeof WS_METHODS.serverGetTraceDiagnostics>;
     readonly getProcessDiagnostics: RpcUnaryNoArgMethod<
       typeof WS_METHODS.serverGetProcessDiagnostics
@@ -261,6 +263,10 @@ export function createWsRpcClient(transport: WsTransport): WsRpcClient {
         transport.request((client) => client[WS_METHODS.serverUpdateSettings]({ patch })),
       discoverSourceControl: () =>
         transport.request((client) => client[WS_METHODS.serverDiscoverSourceControl]({})),
+      getMyWork: (input) =>
+        transport.request((client) => client[WS_METHODS.serverGetMyWork](input ?? {})),
+      handoffJiraTicketToQa: (input) =>
+        transport.request((client) => client[WS_METHODS.serverHandoffJiraTicketToQa](input)),
       getTraceDiagnostics: () =>
         transport.request((client) =>
           client[WS_METHODS.serverGetTraceDiagnostics]({}).pipe(Effect.withTracerEnabled(false)),

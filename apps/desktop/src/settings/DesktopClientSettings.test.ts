@@ -19,6 +19,12 @@ const clientSettings: ClientSettings = {
   diffIgnoreWhitespace: true,
   diffWordWrap: true,
   favorites: [],
+  jiraBaseUrl: "https://example.atlassian.net",
+  jiraEmail: "developer@example.com",
+  jiraApiToken: "token",
+  jiraJql: "assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC",
+  jiraPickupBoardIds: [101],
+  jiraPickupTicketFilter: "mobile",
   providerModelPreferences: {},
   sidebarProjectGroupingMode: "repository_path",
   sidebarProjectGroupingOverrides: {

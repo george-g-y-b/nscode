@@ -88,6 +88,11 @@ import {
 } from "./server.ts";
 import { ServerSettings, ServerSettingsError, ServerSettingsPatch } from "./settings.ts";
 import {
+  JiraQaHandoffInput,
+  JiraQaHandoffResult,
+  MyWorkError,
+  MyWorkSummaryInput,
+  MyWorkSummaryResult,
   SourceControlCloneRepositoryInput,
   SourceControlCloneRepositoryResult,
   SourceControlDiscoveryResult,
@@ -145,6 +150,8 @@ export const WS_METHODS = {
   serverGetSettings: "server.getSettings",
   serverUpdateSettings: "server.updateSettings",
   serverDiscoverSourceControl: "server.discoverSourceControl",
+  serverGetMyWork: "server.getMyWork",
+  serverHandoffJiraTicketToQa: "server.handoffJiraTicketToQa",
   serverGetTraceDiagnostics: "server.getTraceDiagnostics",
   serverGetProcessDiagnostics: "server.getProcessDiagnostics",
   serverGetProcessResourceHistory: "server.getProcessResourceHistory",
@@ -215,6 +222,18 @@ export const WsServerUpdateSettingsRpc = Rpc.make(WS_METHODS.serverUpdateSetting
 export const WsServerDiscoverSourceControlRpc = Rpc.make(WS_METHODS.serverDiscoverSourceControl, {
   payload: Schema.Struct({}),
   success: SourceControlDiscoveryResult,
+});
+
+export const WsServerGetMyWorkRpc = Rpc.make(WS_METHODS.serverGetMyWork, {
+  payload: MyWorkSummaryInput,
+  success: MyWorkSummaryResult,
+  error: MyWorkError,
+});
+
+export const WsServerHandoffJiraTicketToQaRpc = Rpc.make(WS_METHODS.serverHandoffJiraTicketToQa, {
+  payload: JiraQaHandoffInput,
+  success: JiraQaHandoffResult,
+  error: MyWorkError,
 });
 
 export const WsServerGetTraceDiagnosticsRpc = Rpc.make(WS_METHODS.serverGetTraceDiagnostics, {
@@ -481,6 +500,8 @@ export const WsRpcGroup = RpcGroup.make(
   WsServerGetSettingsRpc,
   WsServerUpdateSettingsRpc,
   WsServerDiscoverSourceControlRpc,
+  WsServerGetMyWorkRpc,
+  WsServerHandoffJiraTicketToQaRpc,
   WsServerGetTraceDiagnosticsRpc,
   WsServerGetProcessDiagnosticsRpc,
   WsServerGetProcessResourceHistoryRpc,

@@ -14,7 +14,7 @@ afterEach(() => {
 });
 
 describe("branding", () => {
-  it("uses injected desktop branding when available", async () => {
+  it("falls back to NorthStar name when desktop injects legacy T3 branding", async () => {
     Object.defineProperty(globalThis, "window", {
       configurable: true,
       value: {
@@ -30,9 +30,30 @@ describe("branding", () => {
 
     const branding = await import("./branding");
 
-    expect(branding.APP_BASE_NAME).toBe("T3 Code");
+    expect(branding.APP_BASE_NAME).toBe("NorthStar Code");
     expect(branding.APP_STAGE_LABEL).toBe("Nightly");
-    expect(branding.APP_DISPLAY_NAME).toBe("T3 Code (Nightly)");
+    expect(branding.APP_DISPLAY_NAME).toBe("NorthStar Code (Nightly)");
+  });
+
+  it("uses injected desktop branding when it is not legacy", async () => {
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: {
+        desktopBridge: {
+          getAppBranding: () => ({
+            baseName: "NorthStar Code",
+            stageLabel: "Nightly",
+            displayName: "NorthStar Code (Nightly)",
+          }),
+        },
+      },
+    });
+
+    const branding = await import("./branding");
+
+    expect(branding.APP_BASE_NAME).toBe("NorthStar Code");
+    expect(branding.APP_STAGE_LABEL).toBe("Nightly");
+    expect(branding.APP_DISPLAY_NAME).toBe("NorthStar Code (Nightly)");
   });
 
   it("normalizes hosted app channel metadata", async () => {
@@ -43,7 +64,7 @@ describe("branding", () => {
     expect(branding.HOSTED_APP_CHANNEL).toBe("nightly");
     expect(branding.HOSTED_APP_CHANNEL_LABEL).toBe("Nightly");
     expect(branding.APP_STAGE_LABEL).toBe("Nightly");
-    expect(branding.APP_DISPLAY_NAME).toBe("T3 Code (Nightly)");
+    expect(branding.APP_DISPLAY_NAME).toBe("NorthStar Code (Nightly)");
   });
 
   it("ignores unknown hosted app channels", async () => {

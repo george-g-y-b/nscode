@@ -2,7 +2,7 @@ import * as Effect from "effect/Effect";
 import * as Duration from "effect/Duration";
 import * as Schema from "effect/Schema";
 import * as SchemaTransformation from "effect/SchemaTransformation";
-import { TrimmedNonEmptyString, TrimmedString } from "./baseSchemas.ts";
+import { PositiveInt, TrimmedNonEmptyString, TrimmedString } from "./baseSchemas.ts";
 import { DEFAULT_GIT_TEXT_GENERATION_MODEL, ProviderOptionSelections } from "./model.ts";
 import { ModelSelection } from "./orchestration.ts";
 import { ProviderInstanceConfig, ProviderInstanceId } from "./providerInstance.ts";
@@ -12,6 +12,9 @@ import { ProviderInstanceConfig, ProviderInstanceId } from "./providerInstance.t
 export const TimestampFormat = Schema.Literals(["locale", "12-hour", "24-hour"]);
 export type TimestampFormat = typeof TimestampFormat.Type;
 export const DEFAULT_TIMESTAMP_FORMAT: TimestampFormat = "locale";
+export const JiraPickupTicketFilter = Schema.Literals(["all", "mobile", "non_mobile"]);
+export type JiraPickupTicketFilter = typeof JiraPickupTicketFilter.Type;
+export const DEFAULT_JIRA_PICKUP_TICKET_FILTER: JiraPickupTicketFilter = "all";
 
 export const SidebarProjectSortOrder = Schema.Literals(["updated_at", "created_at", "manual"]);
 export type SidebarProjectSortOrder = typeof SidebarProjectSortOrder.Type;
@@ -88,6 +91,16 @@ export const ClientSettingsSchema = Schema.Struct({
   ),
   sidebarThreadPreviewCount: SidebarThreadPreviewCount.pipe(
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_SIDEBAR_THREAD_PREVIEW_COUNT)),
+  ),
+  jiraBaseUrl: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
+  jiraEmail: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
+  jiraApiToken: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
+  jiraJql: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
+  jiraPickupBoardIds: Schema.Array(PositiveInt).pipe(
+    Schema.withDecodingDefault(Effect.succeed([])),
+  ),
+  jiraPickupTicketFilter: JiraPickupTicketFilter.pipe(
+    Schema.withDecodingDefault(Effect.succeed(DEFAULT_JIRA_PICKUP_TICKET_FILTER)),
   ),
   timestampFormat: TimestampFormat.pipe(
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_TIMESTAMP_FORMAT)),
@@ -480,6 +493,12 @@ export const ClientSettingsPatch = Schema.Struct({
   confirmThreadDelete: Schema.optionalKey(Schema.Boolean),
   diffIgnoreWhitespace: Schema.optionalKey(Schema.Boolean),
   diffWordWrap: Schema.optionalKey(Schema.Boolean),
+  jiraBaseUrl: Schema.optionalKey(TrimmedString),
+  jiraEmail: Schema.optionalKey(TrimmedString),
+  jiraApiToken: Schema.optionalKey(TrimmedString),
+  jiraJql: Schema.optionalKey(TrimmedString),
+  jiraPickupBoardIds: Schema.optionalKey(Schema.Array(PositiveInt)),
+  jiraPickupTicketFilter: Schema.optionalKey(JiraPickupTicketFilter),
   favorites: Schema.optionalKey(
     Schema.Array(
       Schema.Struct({

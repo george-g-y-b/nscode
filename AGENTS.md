@@ -23,6 +23,19 @@ If a tradeoff is required, choose correctness and robustness over short-term con
 
 Long term maintainability is a core priority. If you add new functionality, first check if there is shared logic that can be extracted to a separate module. Duplicate logic across multiple files is a code smell and should be avoided. Don't be afraid to change existing code. Don't take shortcuts by just adding local logic to solve a problem.
 
+## Upstream Compatibility (Critical)
+
+This repo is a fork and must stay easy to sync with `pingdotgg/t3code` upstream.
+
+- Prefer composition over modification: add local UX layers, defaults, and views on top of existing primitives instead of rewriting upstream behavior.
+- Keep upstream touch points small and explicit: avoid broad refactors in hot upstream files unless strictly required for correctness.
+- Avoid unnecessary renames/moves of upstream files, exports, or public contracts. These create merge friction.
+- Keep fork-specific behavior isolated behind clear modules, settings, or feature flags where practical.
+- Preserve upstream defaults and semantics unless a change is intentionally fork-specific and documented.
+- When changing shared protocol or contract surfaces (`packages/contracts`, provider/session orchestration, ws/rpc APIs), bias toward additive changes and backward compatibility.
+- If a fork-specific divergence is necessary, document it in the PR/commit notes with rationale and expected upstream merge impact.
+- Before implementing non-trivial behavior, check for an upstream pattern/issue first and align with it when possible.
+
 ## Package Roles
 
 - `apps/server`: Node.js WebSocket server. Wraps Codex app-server (JSON-RPC over stdio), serves the React web app, and manages provider sessions.

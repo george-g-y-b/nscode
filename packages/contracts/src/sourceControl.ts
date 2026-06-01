@@ -150,6 +150,105 @@ export const SourceControlDiscoveryResult = Schema.Struct({
 });
 export type SourceControlDiscoveryResult = typeof SourceControlDiscoveryResult.Type;
 
+export const MyWorkPullRequestKind = Schema.Literals(["authored", "review_requested"]);
+export type MyWorkPullRequestKind = typeof MyWorkPullRequestKind.Type;
+
+export const PullRequestReviewDecision = Schema.Literals([
+  "approved",
+  "changes_requested",
+  "review_required",
+  "unknown",
+]);
+export type PullRequestReviewDecision = typeof PullRequestReviewDecision.Type;
+
+export const MyWorkPullRequest = Schema.Struct({
+  kind: MyWorkPullRequestKind,
+  provider: SourceControlProviderKind,
+  number: PositiveInt,
+  title: TrimmedNonEmptyString,
+  url: TrimmedNonEmptyString,
+  repositoryNameWithOwner: TrimmedNonEmptyString,
+  headRefName: Schema.optional(TrimmedNonEmptyString),
+  reviewDecision: Schema.optional(PullRequestReviewDecision),
+  state: ChangeRequestState,
+  isDraft: Schema.Boolean,
+  updatedAt: TrimmedNonEmptyString,
+});
+export type MyWorkPullRequest = typeof MyWorkPullRequest.Type;
+
+export const JiraTicketStatus = Schema.Struct({
+  name: TrimmedNonEmptyString,
+  category: Schema.optional(TrimmedNonEmptyString),
+});
+export type JiraTicketStatus = typeof JiraTicketStatus.Type;
+
+export const JiraTicketSummary = Schema.Struct({
+  key: TrimmedNonEmptyString,
+  url: TrimmedNonEmptyString,
+  title: TrimmedNonEmptyString,
+  status: JiraTicketStatus,
+  priority: Schema.optional(TrimmedNonEmptyString),
+  assignee: Schema.optional(TrimmedNonEmptyString),
+  labels: Schema.optionalKey(Schema.Array(TrimmedNonEmptyString)),
+  updatedAt: TrimmedNonEmptyString,
+});
+export type JiraTicketSummary = typeof JiraTicketSummary.Type;
+
+export const JiraBoardSummary = Schema.Struct({
+  id: PositiveInt,
+  name: TrimmedNonEmptyString,
+});
+export type JiraBoardSummary = typeof JiraBoardSummary.Type;
+
+export const JiraMyWorkStatus = Schema.Literals(["available", "not_configured", "error"]);
+export type JiraMyWorkStatus = typeof JiraMyWorkStatus.Type;
+
+export const JiraMyWorkSnapshot = Schema.Struct({
+  status: JiraMyWorkStatus,
+  baseUrl: Schema.NullOr(TrimmedNonEmptyString),
+  detail: Schema.NullOr(TrimmedNonEmptyString),
+  tickets: Schema.Array(JiraTicketSummary),
+  pickupTickets: Schema.optionalKey(Schema.Array(JiraTicketSummary)),
+  pickupBoards: Schema.optionalKey(Schema.Array(JiraBoardSummary)),
+});
+export type JiraMyWorkSnapshot = typeof JiraMyWorkSnapshot.Type;
+
+export const MyWorkSummaryInput = Schema.Struct({
+  pullRequestLimit: Schema.optional(PositiveInt),
+  jiraLimit: Schema.optional(PositiveInt),
+  jiraJql: Schema.optional(TrimmedNonEmptyString),
+  jiraBaseUrl: Schema.optional(TrimmedNonEmptyString),
+  jiraEmail: Schema.optional(TrimmedNonEmptyString),
+  jiraApiToken: Schema.optional(TrimmedNonEmptyString),
+  jiraPickupBoardIds: Schema.optional(Schema.Array(PositiveInt)),
+});
+export type MyWorkSummaryInput = typeof MyWorkSummaryInput.Type;
+
+export const JiraQaHandoffInput = Schema.Struct({
+  ticketKey: TrimmedNonEmptyString,
+  qaComment: Schema.optional(TrimmedNonEmptyString),
+  jiraBaseUrl: Schema.optional(TrimmedNonEmptyString),
+  jiraEmail: Schema.optional(TrimmedNonEmptyString),
+  jiraApiToken: Schema.optional(TrimmedNonEmptyString),
+});
+export type JiraQaHandoffInput = typeof JiraQaHandoffInput.Type;
+
+export const JiraQaHandoffResult = Schema.Struct({
+  ticketKey: TrimmedNonEmptyString,
+  transitioned: Schema.Boolean,
+  toStatus: Schema.NullOr(TrimmedNonEmptyString),
+  commentPosted: Schema.Boolean,
+  detail: TrimmedNonEmptyString,
+});
+export type JiraQaHandoffResult = typeof JiraQaHandoffResult.Type;
+
+export const MyWorkSummaryResult = Schema.Struct({
+  refreshedAt: TrimmedNonEmptyString,
+  pullRequests: Schema.Array(MyWorkPullRequest),
+  jira: JiraMyWorkSnapshot,
+});
+export type MyWorkSummaryResult = typeof MyWorkSummaryResult.Type;
+
 export class SourceControlProviderError extends Schema.TaggedErrorClass<SourceControlProviderError>()(
   "SourceControlProviderError",
   {
@@ -175,5 +274,15 @@ export class SourceControlRepositoryError extends Schema.TaggedErrorClass<Source
 ) {
   override get message(): string {
     return `Source control repository operation ${this.operation} failed for ${this.provider}: ${this.detail}`;
+  }
+}
+
+export class MyWorkError extends Schema.TaggedErrorClass<MyWorkError>()("MyWorkError", {
+  operation: TrimmedNonEmptyString,
+  detail: TrimmedNonEmptyString,
+  cause: Schema.optional(Schema.Defect),
+}) {
+  override get message(): string {
+    return `My work query failed in ${this.operation}: ${this.detail}`;
   }
 }

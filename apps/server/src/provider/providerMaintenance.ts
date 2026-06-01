@@ -15,6 +15,8 @@ import { HttpClient, HttpClientRequest } from "effect/unstable/http";
 const LATEST_VERSION_CACHE_TTL_MS = 60 * 60 * 1_000;
 const LATEST_VERSION_TIMEOUT_MS = 4_000;
 const PROVIDER_UPDATE_ACTION_TOAST_MESSAGE = "Install the update now or review provider settings.";
+const HOMEBREW_CASK_API_BASE_URL = "https://formulae.brew.sh/api/cask";
+const HOMEBREW_FORMULA_API_BASE_URL = "https://formulae.brew.sh/api/formula";
 
 export interface ProviderMaintenanceCapabilities {
   readonly provider: ProviderDriverKind;
@@ -63,6 +65,21 @@ const latestVersionCache = new Map<string, LatestVersionCacheEntry>();
 const NpmLatestVersionResponse = Schema.Struct({
   version: Schema.optional(Schema.String),
 });
+const HomebrewCaskVersionResponse = Schema.Struct({
+  version: Schema.optional(Schema.String),
+});
+const HomebrewFormulaVersionResponse = Schema.Struct({
+  versions: Schema.optional(
+    Schema.Struct({
+      stable: Schema.optional(Schema.String),
+    }),
+  ),
+});
+const decodeNpmLatestVersionResponse = Schema.decodeUnknownEffect(NpmLatestVersionResponse);
+const decodeHomebrewCaskVersionResponse = Schema.decodeUnknownEffect(HomebrewCaskVersionResponse);
+const decodeHomebrewFormulaVersionResponse = Schema.decodeUnknownEffect(
+  HomebrewFormulaVersionResponse,
+);
 
 export function clearLatestProviderVersionCacheForTests(): void {
   latestVersionCache.clear();
@@ -416,28 +433,90 @@ const fetchNpmLatestVersion = Effect.fn("fetchNpmLatestVersion")(function* (pack
     return null;
   }
   const payload = yield* httpResponse.json.pipe(
-    Effect.flatMap(Schema.decodeUnknownEffect(NpmLatestVersionResponse)),
+    Effect.flatMap(decodeNpmLatestVersionResponse),
     Effect.catch(() => Effect.succeed(null)),
   );
   return payload ? nonEmptyString(payload.version) : null;
 });
 
+const fetchHomebrewLatestVersion = Effect.fn("fetchHomebrewLatestVersion")(function* (
+  packageToken: string,
+) {
+  const client = yield* HttpClient.HttpClient;
+  const encodedPackageToken = encodeURIComponent(packageToken);
+  const fetchJsonResponse = Effect.fn("fetchHomebrewLatestVersion.fetchJsonResponse")(function* (
+    url: string,
+  ) {
+    const request = HttpClientRequest.get(url).pipe(
+      HttpClientRequest.setHeader("accept", "application/json"),
+    );
+    const response = yield* client.execute(request).pipe(
+      Effect.timeoutOption(LATEST_VERSION_TIMEOUT_MS),
+      Effect.catch(() => Effect.succeed(Option.none())),
+    );
+    if (Option.isNone(response)) {
+      return null;
+    }
+    const httpResponse = response.value;
+    if (httpResponse.status < 200 || httpResponse.status >= 300) {
+      return null;
+    }
+    return yield* httpResponse.json.pipe(Effect.catch(() => Effect.succeed(null)));
+  });
+
+  const caskJson = yield* fetchJsonResponse(
+    `${HOMEBREW_CASK_API_BASE_URL}/${encodedPackageToken}.json`,
+  );
+  const caskPayload = yield* decodeHomebrewCaskVersionResponse(caskJson).pipe(
+    Effect.catch(() => Effect.succeed(null)),
+  );
+  const caskVersion = caskPayload ? nonEmptyString(caskPayload.version) : null;
+  if (caskVersion) {
+    return caskVersion;
+  }
+
+  const formulaJson = yield* fetchJsonResponse(
+    `${HOMEBREW_FORMULA_API_BASE_URL}/${encodedPackageToken}.json`,
+  );
+  const formulaPayload = yield* decodeHomebrewFormulaVersionResponse(formulaJson).pipe(
+    Effect.catch(() => Effect.succeed(null)),
+  );
+  return formulaPayload ? nonEmptyString(formulaPayload.versions?.stable) : null;
+});
+
+function resolveHomebrewPackageToken(
+  maintenanceCapabilities: ProviderMaintenanceCapabilities,
+): string | null {
+  if (maintenanceCapabilities.update?.executable !== "brew") {
+    return null;
+  }
+  const [, packageToken] = maintenanceCapabilities.update.args;
+  return nonEmptyString(packageToken);
+}
+
 export const resolveLatestProviderVersion = Effect.fn("resolveLatestProviderVersion")(function* (
   maintenanceCapabilities: ProviderMaintenanceCapabilities,
 ) {
-  const packageName = maintenanceCapabilities.packageName;
-  if (!packageName) {
+  const homebrewPackageToken = resolveHomebrewPackageToken(maintenanceCapabilities);
+  const packageName = nonEmptyString(maintenanceCapabilities.packageName);
+  if (!homebrewPackageToken && !packageName) {
     return null;
   }
 
-  const cached = latestVersionCache.get(packageName);
+  const cacheKey = homebrewPackageToken ? `homebrew:${homebrewPackageToken}` : `npm:${packageName}`;
+  const cached = latestVersionCache.get(cacheKey);
   const now = DateTime.toEpochMillis(yield* DateTime.now);
   if (cached && cached.expiresAt > now) {
     return cached.version;
   }
 
-  const version = yield* fetchNpmLatestVersion(packageName);
-  latestVersionCache.set(packageName, {
+  const version = homebrewPackageToken
+    ? ((yield* fetchHomebrewLatestVersion(homebrewPackageToken)) ??
+      (packageName ? yield* fetchNpmLatestVersion(packageName) : null))
+    : packageName
+      ? yield* fetchNpmLatestVersion(packageName)
+      : null;
+  latestVersionCache.set(cacheKey, {
     expiresAt: now + LATEST_VERSION_CACHE_TTL_MS,
     version,
   });
