@@ -1,6 +1,20 @@
-# T3 Code
+# NorthStar Code (T3 Code Fork)
 
-T3 Code is a minimal web GUI for coding agents (currently Codex, Claude, and OpenCode, more coming soon).
+NorthStar Code is a fork of [T3 Code](https://github.com/pingdotgg/t3code): a minimal web GUI for coding agents (currently Codex, Claude, and OpenCode, more coming soon).
+
+This fork keeps T3 primitives intact while adding an opinionated developer workbench for daily engineering workflow.
+
+## What's added in this fork
+
+- Engineering workbench dashboard on the no-thread screen
+- Open PR workflow sections:
+  - Authored PRs
+  - PRs where review is requested
+- PR actions for quick open/hide and AI review prompt seeding
+- Jira "tickets in flight" panel
+- Jira "unassigned sprint tickets" panel with board-scope controls
+- Workflow prompt launcher that starts a new chat with the selected prompt prefilled
+- QA handoff action for transitioning Jira tickets to QA (with optional QA notes)
 
 ## Installation
 
@@ -40,15 +54,39 @@ brew install --cask t3-code
 yay -S t3code-bin
 ```
 
+## Local development (this fork)
+
+```bash
+bun install
+PATH="$HOME/.bun/bin:$PATH" bun run dev:desktop
+```
+
+## Jira setup for the workbench
+
+Set Jira credentials in the same shell where you launch the app:
+
+```bash
+export T3CODE_JIRA_BASE_URL="https://your-org.atlassian.net"
+export T3CODE_JIRA_EMAIL="you@company.com"
+export T3CODE_JIRA_API_TOKEN="your_api_token"
+export T3CODE_JIRA_JQL='assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC'
+PATH="$HOME/.bun/bin:$PATH" bun run dev:desktop
+```
+
+Notes:
+
+- `T3CODE_JIRA_JQL` is optional (default is the same query shown above).
+- The workbench can also test/save Jira settings from the UI.
+
 ## Some notes
 
 We are very very early in this project. Expect bugs.
 
-We are not accepting contributions yet.
+Contributions are welcome.
 
 Observability guide: [docs/observability.md](./docs/observability.md)
 
-## If you REALLY want to contribute still.... read this first
+## Contributing
 
 Before local development, prepare the environment and install dependencies:
 
